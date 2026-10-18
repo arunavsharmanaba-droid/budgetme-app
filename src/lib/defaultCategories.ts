@@ -171,14 +171,27 @@ export const DEFAULT_CATEGORY_TEMPLATES: DefaultCategoryTemplate[] = [
   },
 ];
 
+function safeDocIdSegment(value: string): string {
+  const translit: Record<string, string> = {
+    а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+  };
+
+  const normalized = Array.from(value.toLowerCase())
+    .map((char) => translit[char] ?? char)
+    .join('');
+
+  const ascii = normalized.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return ascii || 'item';
+}
+
 // Helper to generate full default categories for a user
 export function generateInitialCategories(userId: string): Category[] {
   const result: Category[] = [];
   let sort = 1;
 
   for (const template of DEFAULT_CATEGORY_TEMPLATES) {
-    const parentId = `cat_${template.type}_${template.name.toLowerCase().replace(/[^a-zа-я0-9]/gi, '_')}`;
-    
+    const parentId = `cat_${template.type}_${safeDocIdSegment(template.name)}`;
+
     // Add root category
     result.push({
       id: parentId,
@@ -197,7 +210,7 @@ export function generateInitialCategories(userId: string): Category[] {
     if (template.subcategories) {
       let subSort = 1;
       for (const subName of template.subcategories) {
-        const subId = `${parentId}_sub_${subName.toLowerCase().replace(/[^a-zа-я0-9]/gi, '_')}`;
+        const subId = `${parentId}_sub_${safeDocIdSegment(subName)}`;
         result.push({
           id: subId,
           userId,

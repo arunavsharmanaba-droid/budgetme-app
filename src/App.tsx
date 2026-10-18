@@ -12,7 +12,6 @@ import { HomeScreen } from './components/HomeScreen';
 import { HistoryScreen } from './components/HistoryScreen';
 import { StatsScreen } from './components/StatsScreen';
 import { SettingsScreen } from './components/SettingsScreen';
-import { AuthScreen } from './components/AuthScreen';
 import { HouseholdOnboardingScreen } from './components/HouseholdOnboardingScreen';
 import { UndoToast } from './components/UndoToast';
 
@@ -47,24 +46,22 @@ export function MainLayout() {
     );
   }
 
-  // 1. If not authenticated and not in guest mode, show clean Google Sign-In screen
-  if (!user && !guestMode) {
+  if (!user && !authLoading) {
     return (
-      <AuthScreen
-        onContinueAsGuest={() => {
-          setGuestMode(true);
-          localStorage.setItem('budget_guest_mode', 'true');
-        }}
-      />
+      <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex flex-col items-center justify-center p-4">
+        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xl animate-pulse">
+          Б
+        </div>
+        <p className="text-xs text-stone-400 mt-3 font-medium">
+          Подключаем безопасную сессию семьи...
+        </p>
+      </div>
     );
   }
 
-  // 2. If user is authenticated but not in any household yet, show onboarding
   if (user && !household) {
     return <HouseholdOnboardingScreen />;
   }
-
-  // 3. User is in household (or previewing as guest) -> show main budget notebook
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans transition-colors duration-200">
       <main className="flex-1 w-full max-w-lg mx-auto">

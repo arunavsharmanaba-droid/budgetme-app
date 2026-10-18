@@ -11,7 +11,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType as FsOpType, testConnection } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType as FsOpType, testConnection } from '../lib/firebase';
 import {
   Category,
   CategorizationRule,
@@ -74,6 +74,16 @@ interface BudgetContextType {
 }
 
 const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
+
+const logHouseholdWrite = (stage: string, path: string, error?: unknown) => {
+  if (error instanceof Error) {
+    console.error('[HouseholdWrite] stage:', stage, 'path:', path, 'errorCode:', (error as any).code || 'unknown', 'message:', error.message);
+  } else if (error) {
+    console.error('[HouseholdWrite] stage:', stage, 'path:', path, 'errorCode:', (error as any)?.code || 'unknown', 'details:', error);
+  } else {
+    console.info('[HouseholdWrite] stage:', stage, 'path:', path);
+  }
+};
 
 export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -265,6 +275,13 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const createHousehold = async (name: string, familyRole: string): Promise<string> => {
     if (!user) throw new Error('Требуется авторизация');
 
+    console.info('[createHousehold] start', {
+      authCurrentUser: !!auth.currentUser,
+      authUid: auth.currentUser?.uid ?? null,
+      userUid: user.uid,
+      firestoreDatabase: db.databaseId || 'default',
+    });
+
     const householdId = `hh_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const nowISO = new Date().toISOString();
 
@@ -287,28 +304,48 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       joinedAt: nowISO,
     };
 
-    const batch = writeBatch(db);
-    batch.set(doc(db, 'households', householdId), householdDoc);
-    batch.set(doc(db, 'households', householdId, 'members', user.uid), ownerMember);
+    try {
+      // Must create the household and the owner member first. Categories are written only after
+      // the member document exists, otherwise Firestore rules reject the batch because
+      // isHouseholdMember() checks the member record before it is committed.
+      const initialBatch = writeBatch(db);
+      initialBatch.set(doc(db, 'households', householdId), householdDoc);
+      initialBatch.set(doc(db, 'households', householdId, 'members', user.uid), ownerMember);
+      logHouseholdWrite('household-create', `households/${householdId}`);
+      await initialBatch.commit();
+      logHouseholdWrite('household-create-success', `households/${householdId}`);
 
-    // Initial categories
-    const initialCats = generateInitialCategories(user.uid).map((c) => ({
-      ...c,
-      householdId,
-    }));
-    for (const c of initialCats) {
-      batch.set(doc(db, 'households', householdId, 'categories', c.id), c);
+      const initialCats = generateInitialCategories(user.uid).map((c) => ({
+        ...c,
+        householdId,
+      }));
+
+      const categoryBatch = writeBatch(db);
+      for (const c of initialCats) {
+        const catPath = `households/${householdId}/categories/${c.id}`;
+        logHouseholdWrite('category-prepare', catPath);
+        categoryBatch.set(doc(db, 'households', householdId, 'categories', c.id), c);
+      }
+      await categoryBatch.commit();
+      logHouseholdWrite('category-create-success', `households/${householdId}/categories`);
+
+      await updateUserProfile({
+        currentHouseholdId: householdId,
+        familyRole: ownerMember.familyRole,
+      });
+      logHouseholdWrite('user-profile-update-success', `users/${user.uid}`);
+
+      return householdId;
+    } catch (error: any) {
+      const path = `households/${householdId}/categories`;
+      console.error('[createHousehold] Firestore rejected', {
+        stage: 'create-household',
+        path,
+        errorCode: error?.code || 'unknown',
+        message: error?.message || 'unknown error',
+      });
+      throw error;
     }
-
-    await batch.commit();
-
-    // Update user profile
-    await updateUserProfile({
-      currentHouseholdId: householdId,
-      familyRole: ownerMember.familyRole,
-    });
-
-    return householdId;
   };
 
   // Join Household by Invite Code
@@ -458,9 +495,10 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const currentMember = members.find((m) => m.userId === user?.uid);
     const authorRole = userProfile?.familyRole || currentMember?.familyRole || '';
-    const authorName = user?.displayName
+    const fallbackAuthorName = user?.displayName
       ? `${user.displayName.split(' ')[0]}${authorRole ? ` (${authorRole})` : ''}`
-      : authorRole || 'Супруг';
+      : authorRole || 'Кирилл';
+    const authorName = (opData.authorName && opData.authorName.trim()) || fallbackAuthorName;
 
     const newOp: Operation = {
       ...opData,

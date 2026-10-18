@@ -3,7 +3,6 @@ import {
   User,
   Users,
   UserPlus,
-  LogIn,
   LogOut,
   FolderTree,
   Sparkles,
@@ -54,7 +53,7 @@ export const SettingsScreen: React.FC = () => {
     resetToDefaultCategories,
   } = useBudget();
 
-  const { user, userProfile, updateUserProfile, signInWithGoogle, logout } = useAuth();
+  const { user, userProfile, updateUserProfile, logout } = useAuth();
   const { theme, setTheme } = useTheme();
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -167,7 +166,7 @@ export const SettingsScreen: React.FC = () => {
                 Облачная синхронизация
               </h2>
               <p className="text-[11px] text-stone-400">
-                {user ? 'Синхронизировано с Google аккаунтом' : 'Локальный режим на телефоне'}
+                {user ? 'Синхронизировано через семейный бюджет' : 'Подключение к безопасному хранилищу...'}
               </p>
             </div>
           </div>
@@ -206,15 +205,8 @@ export const SettingsScreen: React.FC = () => {
         ) : (
           <div className="pt-1">
             <p className="text-xs text-stone-500 dark:text-stone-400 mb-3 leading-relaxed">
-              Войдите с Google, чтобы данные автоматически сохранялись в защищенном облаке Firestore и были доступны на всех ваших устройствах.
+              Идёт безопасное подключение к семейному бюджету. После восстановления сессии данные будут синхронизироваться между устройствами.
             </p>
-            <button
-              onClick={signInWithGoogle}
-              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>Войти через Google</span>
-            </button>
           </div>
         )}
       </section>

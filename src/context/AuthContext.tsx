@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { User, onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { auth, googleProvider, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile } from '../types/budget';
 
 interface AuthContextType {
@@ -10,7 +10,6 @@ interface AuthContextType {
   loading: boolean;
   authError: string | null;
   clearAuthError: () => void;
-  signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
@@ -27,52 +26,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let unsubProfile: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+      let activeUser = currentUser;
 
-      if (currentUser) {
+      if (!activeUser) {
         try {
-          const userDocRef = doc(db, 'users', currentUser.uid);
-          
-          // Initial check or create profile
-          const snap = await getDoc(userDocRef);
-          if (!snap.exists()) {
-            const initialProfile: UserProfile = {
-              userId: currentUser.uid,
-              displayName: currentUser.displayName || 'Пользователь',
-              email: currentUser.email || '',
-              photoURL: currentUser.photoURL || '',
-              familyRole: 'Супруг',
-              createdAt: new Date().toISOString(),
-            };
-            await setDoc(userDocRef, initialProfile);
-            setUserProfile(initialProfile);
-          } else {
-            setUserProfile(snap.data() as UserProfile);
-          }
-
-          // Realtime listener for user profile changes
-          unsubProfile = onSnapshot(
-            userDocRef,
-            (docSnap) => {
-              if (docSnap.exists()) {
-                setUserProfile(docSnap.data() as UserProfile);
-              }
-            },
-            (error) => {
-              handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
-            }
-          );
-        } catch (err) {
-          console.error('Error fetching user profile:', err);
-        } finally {
+          const anonymousUser = await signInAnonymously(auth);
+          activeUser = anonymousUser.user;
+          console.info('[Auth] Anonymous auth successful', {
+            userId: activeUser.uid,
+            isAnonymous: activeUser.isAnonymous,
+          });
+        } catch (error: any) {
+          console.error('Anonymous auth failed:', error);
+          const message = error?.code === 'auth/operation-not-allowed'
+            ? 'Firebase Anonymous Sign-In отключён в Firebase Console. Включите Anonymous Authentication, чтобы приложение работало без Google-профиля.'
+            : 'Не удалось подключить безопасную сессию. Проверьте подключение к интернету и повторите запуск.';
+          setAuthError(message);
+          setUser(null);
+          setUserProfile(null);
           setLoading(false);
+          return;
         }
-      } else {
-        setUserProfile(null);
-        if (unsubProfile) {
-          unsubProfile();
-          unsubProfile = null;
+      }
+
+      setUser(activeUser);
+
+      try {
+        const userDocRef = doc(db, 'users', activeUser.uid);
+
+        const snap = await getDoc(userDocRef);
+        if (!snap.exists()) {
+          const initialProfile: UserProfile = {
+            userId: activeUser.uid,
+            displayName: activeUser.displayName || 'Пользователь',
+            email: activeUser.email || '',
+            photoURL: activeUser.photoURL || '',
+            familyRole: 'Кирилл',
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(userDocRef, initialProfile);
+          setUserProfile(initialProfile);
+        } else {
+          setUserProfile(snap.data() as UserProfile);
         }
+
+        unsubProfile = onSnapshot(
+          userDocRef,
+          (docSnap) => {
+            if (docSnap.exists()) {
+              setUserProfile(docSnap.data() as UserProfile);
+            }
+          },
+          (error) => {
+            handleFirestoreError(error, OperationType.GET, `users/${activeUser.uid}`);
+          }
+        );
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        setAuthError('Не удалось загрузить профиль пользователя.');
+      } finally {
         setLoading(false);
       }
     });
@@ -82,25 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (unsubProfile) unsubProfile();
     };
   }, []);
-
-  const signInWithGoogle = async () => {
-    setAuthError(null);
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error: any) {
-      console.error('Google Sign-In Error:', error);
-      if (error?.code === 'auth/popup-closed-by-user') {
-        setAuthError('Окно входа было закрыто. Попробуйте снова.');
-      } else if (error?.code === 'auth/cancelled-popup-request') {
-        setAuthError('Запрос на вход отменен.');
-      } else if (error?.code === 'auth/popup-blocked') {
-        setAuthError('Всплывающее окно заблокировано браузером. Разрешите всплывающие окна для входа.');
-      } else {
-        setAuthError('Не удалось войти через Google. Проверьте подключение к интернету.');
-      }
-      throw error;
-    }
-  };
 
   const logout = async () => {
     try {
@@ -139,7 +132,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         authError,
         clearAuthError,
-        signInWithGoogle,
         logout,
         updateUserProfile,
       }}

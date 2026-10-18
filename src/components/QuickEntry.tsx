@@ -11,6 +11,7 @@ interface QuickEntryProps {
 export const QuickEntry: React.FC<QuickEntryProps> = ({ onAddSuccess }) => {
   const { categories, rules, addOperation, userSettings } = useBudget();
   const [inputVal, setInputVal] = useState('');
+  const [selectedPayer, setSelectedPayer] = useState<'Кирилл' | 'Жена'>('Кирилл');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +58,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ onAddSuccess }) => {
         subcategoryId: parsed.subcategoryId || '',
         date: parsed.date,
         source: 'quick_entry',
+        authorName: selectedPayer,
       });
 
       setInputVal('');
@@ -157,6 +159,23 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ onAddSuccess }) => {
             )}
           </div>
         )}
+      </div>
+
+      <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-stone-200/80 bg-stone-50/80 p-1.5 dark:border-stone-800 dark:bg-stone-900/60">
+        {(['Кирилл', 'Жена'] as const).map((payer) => (
+          <button
+            key={payer}
+            type="button"
+            onClick={() => setSelectedPayer(payer)}
+            className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${
+              selectedPayer === payer
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-transparent text-stone-600 hover:bg-stone-200 dark:text-stone-300 dark:hover:bg-stone-800'
+            }`}
+          >
+            {payer}
+          </button>
+        ))}
       </div>
 
       {/* Quick suggestions pills */}

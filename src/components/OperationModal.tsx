@@ -27,6 +27,7 @@ export const OperationModal: React.FC<OperationModalProps> = ({ operation, onClo
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [date, setDate] = useState('');
+  const [authorName, setAuthorName] = useState<'Кирилл' | 'Жена'>('Кирилл');
   const [note, setNote] = useState('');
   const [createRuleCheck, setCreateRuleCheck] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -40,6 +41,7 @@ export const OperationModal: React.FC<OperationModalProps> = ({ operation, onClo
       setCategoryId(operation.categoryId);
       setSubcategoryId(operation.subcategoryId || '');
       setDate(operation.date);
+      setAuthorName(operation.authorName === 'Жена' ? 'Жена' : 'Кирилл');
       setNote(operation.note || '');
       setCreateRuleCheck(false);
       setShowConfirmDelete(false);
@@ -71,6 +73,7 @@ export const OperationModal: React.FC<OperationModalProps> = ({ operation, onClo
       categoryId,
       subcategoryId: subcategoryId || '',
       date,
+      authorName,
       note: note.trim() || undefined,
     });
 
@@ -215,6 +218,28 @@ export const OperationModal: React.FC<OperationModalProps> = ({ operation, onClo
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-stone-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">
+              Кто потратил
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['Кирилл', 'Жена'] as const).map((payer) => (
+                <button
+                  key={payer}
+                  type="button"
+                  onClick={() => setAuthorName(payer)}
+                  className={`py-2 rounded-xl text-xs font-semibold border transition-all ${
+                    authorName === payer
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                      : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400'
+                  }`}
+                >
+                  {payer}
+                </button>
+              ))}
             </div>
           </div>
 

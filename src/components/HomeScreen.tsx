@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { LogIn, Sparkles, Plus, Moon, Sun, ArrowRight, User } from 'lucide-react';
+import { Sparkles, Moon, Sun, ArrowRight } from 'lucide-react';
 import { useBudget } from '../context/BudgetContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -19,7 +19,7 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenHistory, onOpenSettings }) => {
   const { operations, categories, selectedMonth, userSettings, household, members } = useBudget();
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const { isDark, setTheme, theme } = useTheme();
 
   const [selectedOp, setSelectedOp] = useState<Operation | null>(null);
@@ -122,13 +122,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenHistory, onOpenSet
               )}
             </button>
           ) : (
-            <button
-              onClick={signInWithGoogle}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-semibold transition-all active:scale-95"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Войти</span>
-            </button>
+            <div className="px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800/80 text-[11px] text-stone-500 dark:text-stone-400 font-medium">
+              Семья
+            </div>
           )}
         </div>
       </header>
