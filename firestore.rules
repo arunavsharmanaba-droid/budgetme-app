@@ -1,0 +1,122 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Auth & Identity helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Household access helpers
+    function isHouseholdMember(householdId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/households/$(householdId)/members/$(request.auth.uid));
+    }
+
+    function isHouseholdOwner(householdId) {
+      return isSignedIn() && get(/databases/$(database)/documents/households/$(householdId)/members/$(request.auth.uid)).data.role == 'owner';
+    }
+
+    // 1. Households collection
+    match /households/{householdId} {
+      allow get: if isHouseholdMember(householdId);
+      allow list: if false; // Never allow public directory listing of households
+      allow create: if isSignedIn() && isValidId(householdId) && incoming().createdBy == request.auth.uid;
+      allow update: if isHouseholdMember(householdId);
+      allow delete: if isHouseholdOwner(householdId);
+
+      // Members subcollection
+      match /members/{memberId} {
+        allow get, list: if isHouseholdMember(householdId);
+        allow create: if isSignedIn() && isValidId(memberId) && (memberId == request.auth.uid || isHouseholdOwner(householdId));
+        allow update, delete: if isHouseholdOwner(householdId) || (isSignedIn() && memberId == request.auth.uid);
+      }
+
+      // Shared transactions subcollection
+      match /transactions/{txId} {
+        allow get, list: if isHouseholdMember(householdId);
+        allow create: if isHouseholdMember(householdId) &&
+          isValidId(txId) &&
+          incoming().createdBy == request.auth.uid &&
+          incoming().householdId == householdId &&
+          incoming().amount is number &&
+          incoming().amount > 0 &&
+          incoming().description is string &&
+          incoming().description.size() > 0 &&
+          incoming().description.size() <= 200;
+        allow update: if isHouseholdMember(householdId) &&
+          isValidId(txId) &&
+          incoming().amount is number &&
+          incoming().amount > 0;
+        allow delete: if isHouseholdMember(householdId) && isValidId(txId);
+      }
+
+      // Shared categories subcollection
+      match /categories/{catId} {
+        allow get, list: if isHouseholdMember(householdId);
+        allow create, update, delete: if isHouseholdMember(householdId) && isValidId(catId);
+      }
+
+      // Shared categorization rules subcollection
+      match /rules/{ruleId} {
+        allow get, list: if isHouseholdMember(householdId);
+        allow create, update, delete: if isHouseholdMember(householdId) && isValidId(ruleId);
+      }
+    }
+
+    // 2. Invitations collection (secure, one-time)
+    match /invitations/{code} {
+      allow get: if isSignedIn();
+      allow list: if false; // Cannot scrape codes
+      allow create: if isSignedIn() && isHouseholdMember(incoming().householdId);
+      allow update: if isSignedIn() && (
+        isHouseholdMember(existing().householdId) ||
+        (incoming().isUsed == true && existing().isUsed == false)
+      );
+      allow delete: if isSignedIn() && isHouseholdOwner(existing().householdId);
+    }
+
+    // 3. User Profiles
+    match /users/{userId} {
+      allow get: if isSignedIn() && userId == request.auth.uid;
+      allow list: if false;
+      allow create, update, delete: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    // Legacy personal collections support
+    match /operations/{opId} {
+      allow get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(opId) && incoming().userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && isValidId(opId) && existing().userId == request.auth.uid;
+    }
+    match /categories/{catId} {
+      allow get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(catId) && incoming().userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && isValidId(catId) && existing().userId == request.auth.uid;
+    }
+    match /categorization_rules/{ruleId} {
+      allow get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if isSignedIn() && isValidId(ruleId);
+    }
+    match /user_settings/{userId} {
+      allow get, list, create, update, delete: if isSignedIn() && userId == request.auth.uid;
+    }
+  }
+}

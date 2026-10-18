@@ -1,0 +1,156 @@
+{
+  "entities": {
+    "Household": {
+      "title": "Household",
+      "description": "Family budget household entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "currency": { "type": "string", "maxLength": 10 },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "currency", "createdBy"]
+    },
+    "HouseholdMember": {
+      "title": "HouseholdMember",
+      "description": "Member of a household (e.g. husband or wife)",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "role": { "type": "string", "enum": ["owner", "member"] },
+        "familyRole": { "type": "string", "maxLength": 50 },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "role"]
+    },
+    "HouseholdTransaction": {
+      "title": "HouseholdTransaction",
+      "description": "Financial operation in household",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "householdId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["expense", "income", "transfer"] },
+        "description": { "type": "string", "maxLength": 200 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "subcategoryId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 20 },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "source": { "type": "string", "enum": ["manual", "quick_entry"] },
+        "note": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["householdId", "type", "description", "amount", "currency", "categoryId", "date", "createdBy"]
+    },
+    "HouseholdCategory": {
+      "title": "HouseholdCategory",
+      "description": "Category or subcategory in household budget",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "householdId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "enum": ["expense", "income", "transfer"] },
+        "parentId": { "type": "string", "maxLength": 128 },
+        "icon": { "type": "string", "maxLength": 64 },
+        "color": { "type": "string", "maxLength": 32 },
+        "sortOrder": { "type": "number" },
+        "isArchived": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["householdId", "name", "type", "sortOrder"]
+    },
+    "HouseholdRule": {
+      "title": "HouseholdRule",
+      "description": "Household auto-categorization rule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "householdId": { "type": "string", "maxLength": 128 },
+        "keyword": { "type": "string", "maxLength": 100 },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "subcategoryId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["expense", "income", "transfer"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["householdId", "keyword", "categoryId", "type"]
+    },
+    "Invitation": {
+      "title": "Invitation",
+      "description": "Single-use invitation code to join a household",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "code": { "type": "string", "maxLength": 64 },
+        "householdId": { "type": "string", "maxLength": 128 },
+        "householdName": { "type": "string", "maxLength": 100 },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "creatorName": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["member"] },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "isUsed": { "type": "boolean" },
+        "usedBy": { "type": "string", "maxLength": 128 },
+        "usedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "householdId", "createdBy", "role", "expiresAt", "isUsed"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with reference to active household",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "currentHouseholdId": { "type": "string", "maxLength": 128 },
+        "familyRole": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId"]
+    }
+  },
+  "firestore": {
+    "/households/{householdId}": {
+      "schema": "Household",
+      "description": "Household root document"
+    },
+    "/households/{householdId}/members/{userId}": {
+      "schema": "HouseholdMember",
+      "description": "Members subcollection"
+    },
+    "/households/{householdId}/transactions/{transactionId}": {
+      "schema": "HouseholdTransaction",
+      "description": "Shared transactions subcollection"
+    },
+    "/households/{householdId}/categories/{categoryId}": {
+      "schema": "HouseholdCategory",
+      "description": "Shared categories subcollection"
+    },
+    "/households/{householdId}/rules/{ruleId}": {
+      "schema": "HouseholdRule",
+      "description": "Shared auto-categorization rules subcollection"
+    },
+    "/invitations/{code}": {
+      "schema": "Invitation",
+      "description": "One-time invitations collection"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles collection"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Бюджет — Личный финансовый блокнот",
+  "description": "Простой личный и семейный финансовый блокнот для быстрого учета расходов и доходов за 2–5 секунд",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

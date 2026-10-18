@@ -1,0 +1,17 @@
+{
+  "name": "Бюджет — Личный блокнот",
+  "short_name": "Бюджет",
+  "description": "Простой личный и семейный финансовый блокнот для быстрого учета расходов и доходов",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0a09",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%2310b981'><rect width='512' height='512' rx='128' fill='%2310b981'/><text x='50%25' y='60%25' text-anchor='middle' fill='white' font-size='320' font-family='sans-serif' font-weight='bold'>Б</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
